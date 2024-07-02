@@ -12,15 +12,17 @@ type Event struct {
 	Description string    `binding:"required"`
 	Location    string    `binding:"required"`
 	DateTime    time.Time `binding:"required"`
-	UserID      int
+	UserID      int64
 }
 
 var events []Event = []Event{}
 
-func (event Event) Save() error {
+func (event *Event) Save() error {
+	log.Printf("Saving event: %+v\n", event)
 	query := `
 INSERT INTO events (name, description, location, dateTime, user_id)
 values ($1, $2, $3, $4, $5)
+RETURNING id
 `
 	stmt, err := db.DB.Prepare(query)
 	if err != nil {
@@ -28,7 +30,7 @@ values ($1, $2, $3, $4, $5)
 		return err
 	}
 	defer stmt.Close()
-	_, err = stmt.Exec(event.Name, event.Description, event.Location, event.DateTime, event.UserID)
+	err = stmt.QueryRow(event.Name, event.Description, event.Location, event.DateTime, event.UserID).Scan(&event.ID)
 	if err != nil {
 		log.Printf("Error Exec: %v\n", err)
 		return err
